@@ -14,7 +14,7 @@ def decode_pof0(file_data):
     
     # Constants
     POF0_MAGIC = b'POF0'
-    POF0_HEADER_SIZE = 8  # Magic (4 bytes) + Size (4 bytes, uint32 LE)
+    POF0_HEADER_SIZE = 8
     
     # Locate the POF0 section
     pof0_start = file_data.find(POF0_MAGIC)
