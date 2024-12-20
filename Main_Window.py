@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 import csv
 import os
+import struct
 from LEEncoder import encode_pof0, save_pof0_file
 from LEDecoder import decode_pof0
 
@@ -15,9 +16,20 @@ class POF0Tool:
         self.create_widgets()
 
     def create_widgets(self):
+
         # Menu
         self.menu = tk.Menu(self.root)
         self.root.config(menu=self.menu)
+        self.tab_control = ttk.Notebook(self.root)
+
+        # Tabs
+        self.tab_decode = ttk.Frame(self.tab_control)
+        self.tab_memory_map = ttk.Frame(self.tab_control)
+
+        self.tab_control.add(self.tab_decode, text="POF0 Decode")
+        self.tab_control.add(self.tab_memory_map, text="Memory Map")
+        self.tab_control.pack(expand=1, fill="both")
+
 
         # File Menu
         self.file_menu = tk.Menu(self.menu, tearoff=0)
@@ -56,6 +68,10 @@ class POF0Tool:
         self.output_text = scrolledtext.ScrolledText(self.root, wrap=tk.WORD, state="disabled", height=25)
         self.output_text.pack(pady=10, fill=tk.BOTH, expand=True)
 
+        # Memory Map Tab Widgets
+        self.memory_map_text = scrolledtext.ScrolledText(self.tab_memory_map, wrap=tk.WORD, state="disabled", height=25)
+        self.memory_map_text.pack(pady=10, fill=tk.BOTH, expand=True)
+
     def open_file(self):
         """Open a file dialog to select a binary file for decoding."""
         file_path = filedialog.askopenfilename(filetypes=[("Binary Files", "*.pof0"), ("All Files", "*.*")])
@@ -81,11 +97,7 @@ class POF0Tool:
             # Decode the POF0 section
             self.decoded_indices = decode_pof0(file_data)
 
-            # Validate decoded structure
-            if not isinstance(self.decoded_indices, dict):
-                raise TypeError("Decoded POF0 data is not in expected dictionary format.\nPlease verify the file contents.")
-
-            # Display the results
+            # Display the results in Decode Tab
             self.output_text.config(state="normal")
             self.output_text.delete(1.0, tk.END)
             self.output_text.insert(tk.END, f"Decoded POF0 Indices:\n{'-'*40}\n")
@@ -93,10 +105,50 @@ class POF0Tool:
                 self.output_text.insert(tk.END, f"Offset {idx}: Count {value}\n")
             self.output_text.config(state="disabled")
 
+            # Populate the Memory Map
+            self.populate_memory_map(file_data)
+
             messagebox.showinfo("Success", "POF0 Decoding Completed!")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to decode POF0: {str(e)}")
+
+    def populate_memory_map(self, file_data):
+        """Populate the Memory Map tab with reconstructed memory layout."""
+        try:
+            if not hasattr(self, 'decoded_indices') or not self.decoded_indices:
+                raise ValueError("No decoded indices available. Decode a POF0 file first.")
+
+            self.memory_map_text.config(state="normal")
+            self.memory_map_text.delete(1.0, tk.END)
+            self.memory_map_text.insert(tk.END, "Reconstructed Memory Map:\n\n")
+
+            # Create a virtual memory space
+            max_offset = max(self.decoded_indices.keys())
+            memory_size = max_offset + 64  # Add some extra space
+            memory = bytearray(memory_size)
+
+            # Populate memory with data from file using the decoded indices
+            for offset, count in self.decoded_indices.items():
+                if offset >= len(file_data):
+                    continue
+                # Copy data from file to virtual memory
+                end_offset = min(offset + count, len(file_data))
+                memory[offset:end_offset] = file_data[offset:end_offset]
+
+            # Display memory map
+            bytes_per_line = 16
+            for i in range(0, len(memory), bytes_per_line):
+                hex_view = " ".join(f"{byte:02X}" for byte in memory[i:i + bytes_per_line])
+                ascii_view = "".join(
+                    chr(byte) if 32 <= byte < 127 else "." for byte in memory[i:i + bytes_per_line]
+                )
+                self.memory_map_text.insert(tk.END, f"{i:08X}  {hex_view:<48}  {ascii_view}\n")
+
+            self.memory_map_text.config(state="disabled")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to generate Memory Map: {str(e)}")
 
     def save_decoded_to_csv(self):
         """Save decoded POF0 indices to a CSV file."""
