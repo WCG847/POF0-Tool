@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>b2f8018b-cff3-4921-aa20-1e3a79d555b3</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Main_Window.py</StartupFile>
+    <StartupFile>Decoder.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,9 +21,10 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="LEDecoder.py" />
-    <Compile Include="LEEncoder.py" />
-    <Compile Include="Main_Window.py" />
+    <Content Include="Specs.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Decoder.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
