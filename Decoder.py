@@ -40,41 +40,44 @@ class YCHUNK:
 		MASK1 = 63
 		MASK2 = 16383
 		while True:
-			TMP_INDICE = s.unpack("<B", self.YCT.read(1))[0]
-			TMP_IND2 = TMP_INDICE & TYPE3
-			print(f"converted {TMP_INDICE} to {TMP_IND2}")
-			if TMP_IND2 == TYPE3:
-				print(f"{TMP_IND2} is TYPE3 PTR")
-				self.YCT.seek(4, 1)
-				TMP_W3 = s.unpack("<B", self.YCT.read(1))[0]
-				self.YCT.seek(-2, 1)
-				TMP_W2 = s.unpack("<B", self.YCT.read(1))[0]
-				self.YCT.seek(-2, 1)
-				TMP_W1 = s.unpack("<B", self.YCT.read(1))[0]
-				self.YCT.seek(-2, 1)
-				REAL_W = (TMP_INDICE << 24) | (TMP_W1 << 16) | (TMP_W2 << 8) | TMP_W3
-				REAL_IND = ((REAL_W << (32 + 2) & 18446744073709551615) >> (32 + 2) & 18446744073709551615) << 2
-				print(f"converted {TMP_IND2} to {REAL_IND}")
-				self.YCT.seek(3, 1)
+			try:
+				TMP_INDICE = s.unpack("<B", self.YCT.read(1))[0]
+				TMP_IND2 = TMP_INDICE & TYPE3
+				print(f"converted {TMP_INDICE} to {TMP_IND2}")
+				if TMP_IND2 == TYPE3:
+					print(f"{TMP_IND2} is TYPE3 PTR")
+					self.YCT.seek(4, 1)
+					TMP_W3 = s.unpack("<B", self.YCT.read(1))[0]
+					self.YCT.seek(-2, 1)
+					TMP_W2 = s.unpack("<B", self.YCT.read(1))[0]
+					self.YCT.seek(-2, 1)
+					TMP_W1 = s.unpack("<B", self.YCT.read(1))[0]
+					self.YCT.seek(-2, 1)
+					REAL_W = (TMP_INDICE << 24) | (TMP_W1 << 16) | (TMP_W2 << 8) | TMP_W3
+					REAL_IND = ((REAL_W << (32 + 2) & 18446744073709551615) >> (32 + 2) & 18446744073709551615) << 2
+					print(f"converted {TMP_IND2} to {REAL_IND}")
+					self.YCT.seek(3, 1)
 
-			elif TMP_IND2 == TYPE1:
-				print(f"{TMP_IND2} is TYPE1 PTR")
-				TMP_HW = s.unpack("<B", self.YCT.read(1))[0]
-				halfword = (TMP_INDICE << 8) | TMP_HW
-				TMP_IND3 = halfword & MASK2
-				REAL_IND = TMP_IND3 << 2
-				print(f"converted {TMP_IND2} to {REAL_IND}")
-			elif TMP_IND2 == TYPE2:
-				print(f"{TMP_IND2} is TYPE2 PTR")
-				TMP_IND3 = TMP_INDICE & MASK1
-				REAL_IND = TMP_IND3 << 2
-				print(f"converted {TMP_IND2} to {REAL_IND}")
-				
+				elif TMP_IND2 == TYPE1:
+					print(f"{TMP_IND2} is TYPE1 PTR")
+					TMP_HW = s.unpack("<B", self.YCT.read(1))[0]
+					halfword = (TMP_INDICE << 8) | TMP_HW
+					TMP_IND3 = halfword & MASK2
+					REAL_IND = TMP_IND3 << 2
+					print(f"converted {TMP_IND2} to {REAL_IND}")
+				elif TMP_IND2 == TYPE2:
+					print(f"{TMP_IND2} is TYPE2 PTR")
+					TMP_IND3 = TMP_INDICE & MASK1
+					REAL_IND = TMP_IND3 << 2
+					print(f"converted {TMP_IND2} to {REAL_IND}")			
 
-			elif TMP_IND2 == 0:
-				print(f"{TMP_INDICE} NOT SUPPORTED OR EOF.")
+				else:
+					print(f"{TMP_INDICE} NOT SUPPORTED OR EOF.")
+					return
+				self.E.append(REAL_IND)
+			except s.error:
+				print(f"Successfully converted POF0. {self.YCT.tell()} is a EOF")
 				return
-			self.E.append(REAL_IND)
 
 	def get_file_from_user():
 		"""Prompt the user for a file via a file dialog if no command-line argument is given."""
