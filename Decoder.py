@@ -1,155 +1,127 @@
-﻿import struct
+﻿import struct as s
 import sys
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
 import os
 
-# Try to import tkinter for GUI-based file selection
-try:
-    from tkinter import Tk
-    from tkinter.filedialog import askopenfilename
-except ImportError:
-    Tk = None  # Disable file dialog if tkinter is unavailable
-
-MAGIC = b"POF0"
-YOBJ = b"YOBJ"
-YANM = b"YANM"
-SUPPORTED_EXTENSIONS = {".YOBJ", ".YANM", ".POF0"}
-
-
 class YCHUNK:
-    def __init__(self, filename):
-        """Initialize and validate the file."""
-        self.filename = filename
-        self.RVA = None
-        self.PTRs = []  # Store PTR values
+	def __init__(self, YCHUNK_TYPE):
+		self.YCT = open(YCHUNK_TYPE, 'rb')
+		self.E = []
+		self.TMP_E = []
 
-        # Ensure the file has a valid extension
-        if not self.filename.upper().endswith(tuple(SUPPORTED_EXTENSIONS)):
-            raise ValueError(f"Unsupported file type: {self.filename}")
+	def GetChunkType(self):
+		POF0 = 'POF0'
+		YOBJ = 'YOBJ'
+		YANM = 'YANM'
+		MAGIC = s.unpack("4s", self.YCT.read(4))[0].decode('ascii')
+		if MAGIC == POF0:
+			return 1
+		if MAGIC == YOBJ:
+			return 2
+		if MAGIC == YANM:
+			return 3
+		else:
+			raise ValueError(f"{MAGIC} not supported")
 
-        try:
-            self.POF0 = open(self.filename, "rb")
-        except FileNotFoundError:
-            raise FileNotFoundError(f"File not found: {self.filename}")
-        except IOError:
-            raise IOError(f"Error opening file: {self.filename}")
+	def ReadChunkData(self):
+		self.GetChunkType()
+		self.YCT.seek(8)
+		self.YCT.seek(4, 1)
+		POF0PTR = s.unpack("<i", self.YCT.read(4))[0]
+		self.YCT.seek(POF0PTR, 1)
+		print(f"Navigated to {self.YCT.tell()}")
+		self.DecodePOF0()
 
-    def ReadChunkData(self):
-        """Reads the chunk data while ensuring the file is valid."""
-        chunk_type = self.GetChunkType()
-        if chunk_type is None:
-            raise ValueError("Invalid or unsupported file format.")
+	def DecodePOF0(self):
+		TYPE1 = 128
+		TYPE2 = 64
+		TYPE3 = 192
+		MASK1 = 63
+		MASK2 = 16383
+		while True:
+			TMP_INDICE = s.unpack("<B", self.YCT.read(1))[0]
+			TMP_IND2 = TMP_INDICE & TYPE3
+			print(f"converted {TMP_INDICE} to {TMP_IND2}")
+			if TMP_IND2 == TYPE3:
+				print(f"{TMP_IND2} is TYPE3 PTR")
+				self.YCT.seek(4, 1)
+				TMP_W3 = s.unpack("<B", self.YCT.read(1))[0]
+				self.YCT.seek(-2, 1)
+				TMP_W2 = s.unpack("<B", self.YCT.read(1))[0]
+				self.YCT.seek(-2, 1)
+				TMP_W1 = s.unpack("<B", self.YCT.read(1))[0]
+				self.YCT.seek(-2, 1)
+				REAL_W = (TMP_INDICE << 24) | (TMP_W1 << 16) | (TMP_W2 << 8) | TMP_W3
+				REAL_IND = ((REAL_W << (32 + 2) & 18446744073709551615) >> (32 + 2) & 18446744073709551615) << 2
+				print(f"converted {TMP_IND2} to {REAL_IND}")
+				self.YCT.seek(3, 1)
 
-        # Read RVA
-        self.POF0.seek(4)
-        self.RVA = struct.unpack("<i", self.POF0.read(4))[0]
+			elif TMP_IND2 == TYPE1:
+				print(f"{TMP_IND2} is TYPE1 PTR")
+				TMP_HW = s.unpack("<B", self.YCT.read(1))[0]
+				halfword = (TMP_INDICE << 8) | TMP_HW
+				TMP_IND3 = halfword & MASK2
+				REAL_IND = TMP_IND3 << 2
+				print(f"converted {TMP_IND2} to {REAL_IND}")
+			elif TMP_IND2 == TYPE2:
+				print(f"{TMP_IND2} is TYPE2 PTR")
+				TMP_IND3 = TMP_INDICE & MASK1
+				REAL_IND = TMP_IND3 << 2
+				print(f"converted {TMP_IND2} to {REAL_IND}")
+				
 
-        self.POF0.seek(8)
-        self.POF0.seek(self.RVA, 1)  # Move to RVA location
-        self.DecodePOF0()
+			elif TMP_IND2 == 0:
+				print(f"{TMP_INDICE} NOT SUPPORTED OR EOF.")
+				return
+			self.E.append(REAL_IND)
 
-    def GetChunkType(self):
-        """Validates and retrieves the chunk type."""
-        try:
-            self.POF0.seek(0)
-            tmp_MAGIC = self.POF0.read(4)
-            if tmp_MAGIC not in {YOBJ, YANM, MAGIC}:
-                print(f"Invalid file type: {self.filename}")
-                return None
-            return tmp_MAGIC
-        except struct.error:
-            return None
+	def get_file_from_user():
+		"""Prompt the user for a file via a file dialog if no command-line argument is given."""
+		if Tk is None:
+			print("Error: tkinter is required for GUI file selection but is not installed.")
+			sys.exit(1)
 
-    def DecodePOF0(self):
-        """Decodes POF0 data while handling unexpected file behavior."""
-        TYPE1 = 128
-        TYPE2 = 64
-        TYPE3 = 192
-        TYPE4 = 63
-        TYPE5 = 16383
-
-        self.POF0.seek(8, 1)
-
-        while True:
-            try:
-                byte = self.POF0.read(1)
-                if not byte:  # End of file reached
-                    print(f"Reached EOF for {self.filename}")
-                    break
-
-                FLAG = struct.unpack("<B", byte)[0]
-                TMP_FLG = FLAG & TYPE3
-
-                if TMP_FLG == TYPE3:
-                    pass
-
-                elif TMP_FLG == TYPE1:
-                    extra_byte = self.POF0.read(1)
-                    if not extra_byte:
-                        break
-                    flag2 = struct.unpack("<B", extra_byte)[0]
-                    flag3 = (FLAG << 8) | flag2
-                    flag4 = flag3 & TYPE5
-                    PTR = (flag4 << 2) + 8
-                    self.PTRs.append(PTR)  # Store PTR value
-
-                elif TMP_FLG == TYPE2:
-                    TMP_FLG2 = FLAG & TYPE4
-                    PTR = (TMP_FLG2 << 2) + 8
-                    self.PTRs.append(PTR)  # Store PTR value
-                    self.POF0.seek(1, 1)
-
-                elif TMP_FLG == 0:
-                    print("Decoding complete.")
-                    break
-
-            except struct.error:
-                print("Error reading file structure.")
-                break
-
-    def print_results(self):
-        """Prints all PTR values in decimal along with their count."""
-        print("\nDecoded PTR values (in decimal):")
-        for i, ptr in enumerate(self.PTRs, start=1):
-            print(f"{i}: {ptr}")
-        print(f"\nTotal PTR count: {len(self.PTRs)}")
-
-
-def get_file_from_user():
-    """Prompt the user for a file via a file dialog if no command-line argument is given."""
-    if Tk is None:
-        print("Error: tkinter is required for GUI file selection but is not installed.")
-        sys.exit(1)
-
-    root = Tk()
-    root.withdraw()  # Hide the root window
-    file_path = askopenfilename(
-        title="Select a .YOBJ, .YANM, or .POF0 file",
-        filetypes=[("YOBJ, YANM, POF0 files", "*.YOBJ;*.YANM;*.POF0")],
-    )
-    return file_path if file_path else None
+		root = Tk()
+		root.withdraw()  # Hide the root window
+		YCHUNK_TYPE = askopenfilename(
+			title="Select a .YOBJ, .YANM, or .POF0 file",
+			filetypes=[("YOBJ, YANM, POF0 files", "*.YOBJ;*.YANM;*.POF0")],
+		)
+		return YCHUNK_TYPE if YCHUNK_TYPE else None
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:
-        file_path = sys.argv[1]
+        YCHUNK_TYPE = sys.argv[1]
     else:
         print("No file provided, opening file selection dialog...")
-        file_path = get_file_from_user()
+        YCHUNK_TYPE = YCHUNK.get_file_from_user()
 
-    if not file_path:
+    if not YCHUNK_TYPE:
         print("No file selected. Exiting.")
         sys.exit(1)
 
     # Validate if the file exists before processing
-    if not os.path.exists(file_path):
-        print(f"Error: File '{file_path}' does not exist.")
+    if not os.path.exists(YCHUNK_TYPE):
+        print(f"Error: File '{YCHUNK_TYPE}' does not exist.")
         sys.exit(1)
 
     try:
-        chunk = YCHUNK(file_path)
+        chunk = YCHUNK(YCHUNK_TYPE)
         chunk.ReadChunkData()
-        chunk.print_results()  # Print the PTR results
     except Exception as e:
         print(f"Error: {e}")
 
     input("\nPress Enter to exit...")  # Keeps console open if double-clicked
+		
+
+
+
+
+
+
+
+
+
+
