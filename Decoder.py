@@ -54,7 +54,7 @@ class YCHUNK:
 					TMP_W1 = s.unpack("<B", self.YCT.read(1))[0]
 					self.YCT.seek(-2, 1)
 					REAL_W = (TMP_INDICE << 24) | (TMP_W1 << 16) | (TMP_W2 << 8) | TMP_W3
-					REAL_IND = ((REAL_W << (32 + 2) & 18446744073709551615) >> (32 + 2) & 18446744073709551615) << 2
+					REAL_IND = (((REAL_W << (32 + 2) & 18446744073709551615) >> (32 + 2) & 18446744073709551615) << 2) + 8
 					print(f"converted {TMP_IND2} to {REAL_IND}")
 					self.YCT.seek(3, 1)
 
@@ -63,12 +63,12 @@ class YCHUNK:
 					TMP_HW = s.unpack("<B", self.YCT.read(1))[0]
 					halfword = (TMP_INDICE << 8) | TMP_HW
 					TMP_IND3 = halfword & MASK2
-					REAL_IND = TMP_IND3 << 2
+					REAL_IND = (TMP_IND3 << 2) + 8
 					print(f"converted {TMP_IND2} to {REAL_IND}")
 				elif TMP_IND2 == TYPE2:
 					print(f"{TMP_IND2} is TYPE2 PTR")
 					TMP_IND3 = TMP_INDICE & MASK1
-					REAL_IND = TMP_IND3 << 2
+					REAL_IND = (TMP_IND3 << 2) + 8
 					print(f"converted {TMP_IND2} to {REAL_IND}")			
 
 				else:
