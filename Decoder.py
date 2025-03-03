@@ -80,7 +80,7 @@ class YCHUNK:
                     print(f"{TMP_INDICE} NOT SUPPORTED OR EOF.")
                     return
                 self.E.append(REAL_IND)
-            except s.error:
+            except struct.error:
                 print(f"Successfully converted POF0. {self.YCT.tell()} is a EOF")
                 return
 
