@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>b2f8018b-cff3-4921-aa20-1e3a79d555b3</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Decoder.py</StartupFile>
+    <StartupFile>main_window.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -24,8 +24,11 @@
     <Content Include="Specs.md" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Decoder.py" />
-    <Compile Include="Encoder.py" />
+    <Compile Include="Import\chunk.py" />
+    <Compile Include="main_window.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Import\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
